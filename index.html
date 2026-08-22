@@ -71,13 +71,30 @@ legend{
   text-transform:uppercase;color:var(--ink);padding:0 0 8px;
   border-bottom:1px solid var(--rule);width:100%;margin-bottom:12px
 }
+legend .num{
+  display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;
+  background:var(--petrol);color:#fff;font-family:var(--mono);font-size:10px;font-weight:600;
+  margin-right:8px;vertical-align:-3px;letter-spacing:0
+}
 .field{margin-bottom:11px}
 .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:3px}
 .field input[type=number],.field select{
-  width:100%;padding:7px 9px;border:1px solid var(--rule);background:var(--surface);
+  width:100%;padding:7px 9px;border:1px solid #9DB9BC;background:#FAFDFD;
   font-family:var(--mono);font-size:14px;color:var(--ink);border-radius:0
 }
 .field input:focus,.field select:focus{outline:2px solid var(--petrol);outline-offset:-1px}
+/* premissas: já vêm preenchidas, aparência neutra */
+fieldset.preset legend .num{background:var(--muted)}
+fieldset.preset .field input{border:1px dashed var(--rule);background:var(--paper);color:var(--muted)}
+fieldset.preset .field input:focus{color:var(--ink);background:var(--surface)}
+.presetnote{
+  font-size:12px;color:var(--muted);background:var(--paper);
+  border-left:3px solid var(--rule);padding:8px 10px;margin:0 0 12px;line-height:1.4
+}
+.guide{margin:0 0 18px;border:1px solid var(--rule);background:var(--paper);padding:11px 13px}
+.guide summary{font-family:var(--cond);font-weight:700;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase}
+.guide ol{margin:10px 0 0;padding-left:20px;font-size:12.5px;color:var(--muted);line-height:1.55}
+.guide li{margin-bottom:6px}
 .duo{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .check{display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;font-size:13px}
 .check input{margin-top:3px;accent-color:var(--petrol)}
@@ -166,16 +183,28 @@ footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--rule);font-si
 <!-- ============ INPUTS ============ -->
 <form class="panel sticky" id="form" autocomplete="off">
 
+  <details class="guide">
+    <summary>Como preencher</summary>
+    <ol>
+      <li>Comece pelo <b>patrimônio</b> e pela <b>locação</b> — é o caso do cliente.</li>
+      <li>Ajuste o <b>custo da estrutura</b> com o que o escritório cobraria.</li>
+      <li>Confira a <b>alíquota de ITBI</b> do município dos imóveis e o <b>ITCMD</b> do estado.</li>
+      <li>As <b>premissas fiscais</b> já vêm preenchidas — só mexa se tiver motivo.</li>
+      <li>O resultado atualiza sozinho a cada mudança. Não há botão de calcular.</li>
+    </ol>
+  </details>
+
   <fieldset>
-    <legend>Patrimônio</legend>
+    <legend><span class="num">1</span> Patrimônio</legend>
     <div class="field">
       <label>Valor de mercado dos imóveis (R$)</label>
       <input type="number" id="imoveis" value="8000000" step="10000">
+      <p class="hint">Quanto valeriam hoje se fossem vendidos.</p>
     </div>
     <div class="field">
       <label>Custo de aquisição na declaração (R$)</label>
       <input type="number" id="custoAquisicao" value="3200000" step="10000">
-      <p class="hint">Base contábil das quotas. Se as quotas forem avaliadas a mercado, o ITCMD sobe.</p>
+      <p class="hint">O valor que consta no imposto de renda, normalmente bem menor que o de mercado. É a base das quotas na doação.</p>
     </div>
     <div class="duo">
       <div class="field">
@@ -187,10 +216,11 @@ footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--rule);font-si
         <input type="number" id="valoriz" value="4" step="0.5">
       </div>
     </div>
+    <p class="hint">Outros bens entram só na conta do inventário. A valorização corrige patrimônio e aluguel ao longo dos anos.</p>
   </fieldset>
 
   <fieldset>
-    <legend>Locação</legend>
+    <legend><span class="num">2</span> Locação</legend>
     <div class="duo">
       <div class="field">
         <label>Aluguel mensal total (R$)</label>
@@ -212,6 +242,7 @@ footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--rule);font-si
       </div>
     </div>
     <p class="hint" id="avisoImoveis"></p>
+    <p class="hint">Some o aluguel de todos os imóveis num valor só. Depois informe quantos são residenciais e quantos são por temporada — o restante é tratado como comercial.</p>
     <div class="duo">
       <div class="field">
         <label>Despesas dedutíveis (%)</label>
@@ -230,10 +261,11 @@ footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--rule);font-si
   </fieldset>
 
   <fieldset>
-    <legend>Custo da estrutura</legend>
+    <legend><span class="num">3</span> Custo da estrutura</legend>
     <div class="field">
       <label>Honorários de implantação (R$)</label>
       <input type="number" id="honorarios" value="60000" step="1000">
+      <p class="hint">O que o escritório cobra para desenhar e constituir tudo: contrato social, integralização dos imóveis, doação das quotas e acordo de sócios. Pagamento único, no início.</p>
     </div>
     <div class="duo">
       <div class="field">
@@ -245,18 +277,21 @@ footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--rule);font-si
         <input type="number" id="mensal" value="2000" step="100">
       </div>
     </div>
+    <p class="hint">Registros: junta comercial, cartório de imóveis, certidões e emolumentos — também pagamento único. Mensalidade: contabilidade da holding e acompanhamento, todo mês, enquanto a estrutura existir.</p>
     <div class="field">
       <label>Alíquota de ITBI (%)</label>
       <input type="number" id="itbi" value="3" step="0.1">
+      <p class="hint">Imposto do município sobre a transferência dos imóveis para a holding. Costuma ficar entre 2% e 3% — confirme no município de cada imóvel.</p>
     </div>
     <label class="check">
       <input type="checkbox" id="preponderante" checked>
       <span>Atividade preponderantemente imobiliária — sem imunidade de ITBI na integralização</span>
     </label>
+    <p class="hint">Deixe marcado quando a holding vai viver de aluguel: nesse caso a imunidade constitucional não se aplica e o ITBI é devido. Costuma ser o maior item da entrada.</p>
   </fieldset>
 
   <fieldset>
-    <legend>Sucessão</legend>
+    <legend><span class="num">4</span> Sucessão</legend>
     <div class="duo">
       <div class="field">
         <label>ITCMD (%)</label>
@@ -277,21 +312,25 @@ footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--rule);font-si
         <input type="number" id="honInv" value="6" step="0.5">
       </div>
     </div>
+    <p class="hint">ITCMD é o imposto do estado sobre herança e doação. Horizonte é em quantos anos se projeta a sucessão. Custas e honorários são o que se gasta no inventário, além do imposto — e desaparecem quando existe holding.</p>
     <div class="field">
       <label>Avaliação das quotas na doação</label>
       <select id="baseQuotas">
         <option value="contabil">Valor contábil (custo de aquisição)</option>
         <option value="mercado">Valor de mercado</option>
       </select>
+      <p class="hint">A premissa que mais muda o resultado. Alterne entre as duas para medir o risco.</p>
     </div>
     <label class="check">
       <input type="checkbox" id="usufruto" checked>
       <span>Doação da nua-propriedade com reserva de usufruto — base de 2/3</span>
     </label>
+    <p class="hint">Doando só a nua-propriedade e mantendo o usufruto, o ITCMD incide sobre 2/3 do valor. Na morte, a consolidação não gera nova cobrança.</p>
   </fieldset>
 
-  <fieldset>
-    <legend>Premissas fiscais</legend>
+  <fieldset class="preset">
+    <legend><span class="num">5</span> Premissas fiscais</legend>
+    <p class="presetnote">Estes campos já vêm com os valores correntes. Só altere se tiver motivo — e o resultado muda bastante.</p>
     <div class="duo">
       <div class="field">
         <label>Alíquota IBS+CBS (%)</label>

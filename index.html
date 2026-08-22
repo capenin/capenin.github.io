@@ -14,6 +14,23 @@
 <meta property="og:image" content="preview.png">
 <meta name="twitter:card" content="summary_large_image">
 
+<!-- =====================================================================
+     CONTADOR DE USO — opcional, cole o script do serviço escolhido AQUI.
+
+     A página já sabe conversar com GoatCounter, Plausible e Umami.
+     Enquanto nada estiver colado abaixo, nenhuma contagem acontece.
+
+     GoatCounter (gratuito, sem cookie) — crie a conta em goatcounter.com e cole:
+     <script data-goatcounter="https://SEUCODIGO.goatcounter.com/count"
+             async src="//gc.zgo.at/count.js"></script>
+
+     Só é contado comportamento: que alguém abriu, que rodou um cálculo,
+     que abriu as premissas. Nenhum valor digitado é transmitido.
+     Se ativar, mantenha a frase correspondente no rodapé da página.
+====================================================================== -->
+<script data-goatcounter="https://capenin.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -117,6 +134,15 @@ fieldset.preset .field input:focus{color:var(--ink);background:var(--surface)}
 .kpi .s{font-size:12px;color:var(--muted);margin-top:4px}
 .kpi.pos .v{color:var(--petrol)}
 .kpi.neg .v{color:var(--alert)}
+
+.toolbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:-10px 0 24px}
+.toolbar button{
+  font-family:var(--cond);font-weight:700;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+  background:var(--petrol);color:#fff;border:0;padding:9px 16px;cursor:pointer
+}
+.toolbar button:hover{background:#0B474E}
+.toolbar button.ok{background:var(--ink)}
+.tbnote{font-size:12px;color:var(--muted);flex:1 1 240px;min-width:0;line-height:1.4}
 
 /* ---------- régua fiscal (signature) ---------- */
 .ruler{background:var(--surface);border:1px solid var(--rule);padding:18px;margin-bottom:24px}
@@ -363,6 +389,11 @@ footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--rule);font-si
     <div class="kpi" id="kpiSuc"><div class="k">Economia na sucessão</div><div class="v">—</div><div class="s"></div></div>
   </div>
 
+  <div class="toolbar">
+    <button type="button" id="btnCopiar">Copiar resumo do caso</button>
+    <span class="tbnote" id="copiaNota">Gera um texto com as premissas e o resultado, para você colar onde quiser. Nada é enviado — a cópia vai para a sua área de transferência.</span>
+  </div>
+
   <div class="ruler">
     <h3>Régua fiscal</h3>
     <p class="sub">Carga sobre a receita de aluguel, ano a ano. A barra clara é o IBS/CBS entrando — e na locação ele é acréscimo puro, porque não havia ICMS nem ISS para substituir.</p>
@@ -411,8 +442,11 @@ footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--rule);font-si
   </div>
 
   <footer>
-    <div class="privacy">Nada sai deste dispositivo</div>
-    O cálculo é executado no seu navegador. Nenhum valor é enviado, gravado ou compartilhado.
+    <div class="privacy">Seus números não saem deste dispositivo</div>
+    O cálculo é executado no seu navegador. Nenhum valor que você digita é enviado, gravado ou compartilhado —
+    nem pelo botão de copiar, que escreve apenas na sua área de transferência.
+    Durante o período de testes, a página conta de forma anônima quantas vezes é usada e quais seções são abertas,
+    sem cookies e sem registrar qualquer valor informado.<br><br>
     Estimativa para orientar a decisão, sem substituir análise do caso concreto: alíquotas variam por município e por estado,
     e as regras da reforma seguem em regulamentação. Confirme as premissas antes de decidir.
   </footer>
@@ -424,6 +458,28 @@ const $ = id => document.getElementById(id);
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const BRLc = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0,signDisplay:'always'});
 const ANO0 = 2026;
+const VERSAO = '1.2 — premissas de agosto/2026';
+
+/* ------------------------------------------------------------------
+   Contagem de uso — apenas comportamento, nunca valores digitados.
+   Funciona com GoatCounter, Plausible, Umami ou Cloudflare.
+   Enquanto nenhum deles estiver carregado na página, não faz nada.
+   Para ativar: cole o script do serviço escolhido dentro do <head>.
+------------------------------------------------------------------- */
+const evtsRegistrados = new Set();
+function contar(evento, umaVezPorSessao = true){
+  if(!evento) return;
+  if(umaVezPorSessao){
+    if(evtsRegistrados.has(evento)) return;
+    evtsRegistrados.add(evento);
+  }
+  try{
+    if(window.goatcounter && window.goatcounter.count)
+      window.goatcounter.count({path:'evt/'+evento, title:evento, event:true});
+    else if(window.plausible) window.plausible(evento);
+    else if(window.umami && window.umami.track) window.umami.track(evento);
+  }catch(e){ /* silencioso — contagem nunca pode quebrar o cálculo */ }
+}
 
 /* IRPF mensal — tabela progressiva + isenção da Lei 15.270/2025 */
 function irpfMensal(base){
@@ -557,6 +613,15 @@ function calcular(){
 
   render({linhas,entrada,itbi,itcmdAntecipado,honor,registros,paybackAno,vpl,
           custoInventario,economiaSucessoria,horizonte,patFinal,preponderante,transicao});
+
+  /* estado para o resumo — permanece só na memória desta aba */
+  ESTADO = {
+    imoveis,custoAq,outros,valoriz,aluguel,nImoveis,nResid,nTemp,nCom,despesas,recAnterior,
+    honor,registros,mensal,itbiAl,itcmdAl,horizonte,custasAl,honInvAl,aliqRef,presuncao,ipca,desconto,
+    transicao,preponderante,usufruto,baseQuotas,pfContribuinte,testeAnterior,testeCorrente,
+    limiteAnterior,limiteCorrente,itbi,itcmdAntecipado,entrada,paybackAno,vpl,
+    custoInventario,economiaSucessoria,linhas
+  };
 }
 
 function render(r){
@@ -644,6 +709,106 @@ function render(r){
     </tr>`;
   }).join('');
 }
+
+let ESTADO = null;
+
+/* ---------- resumo em texto, gerado sob demanda ---------- */
+function montarResumo(){
+  const e = ESTADO; if(!e) return '';
+  const pct = n => (n*100).toLocaleString('pt-BR',{maximumFractionDigits:2})+'%';
+  const anosChave = [2026,2027,2029,2033];
+  const marcos = e.linhas.filter(l=>anosChave.includes(l.ano));
+  const ult = e.linhas[e.linhas.length-1];
+  const total = ult.acumulado + e.economiaSucessoria;
+  const veredito = $('verdict').querySelector('h2').textContent;
+
+  const L = [];
+  L.push('CALCULADORA DE VIABILIDADE — HOLDING PATRIMONIAL');
+  L.push('Simulação de ' + new Date().toLocaleDateString('pt-BR') + ' · versão ' + VERSAO);
+  L.push('');
+  L.push('— O CASO —');
+  L.push('Imóveis a valor de mercado: ' + BRL(e.imoveis));
+  L.push('Custo de aquisição na declaração: ' + BRL(e.custoAq));
+  L.push('Outros bens: ' + BRL(e.outros) + ' · valorização ' + pct(e.valoriz) + ' a.a.');
+  L.push('Aluguel: ' + BRL(e.aluguel) + '/mês em ' + e.nImoveis + ' imóveis ('
+        + e.nResid + ' resid., ' + e.nTemp + ' temporada, ' + e.nCom + ' comercial)');
+  L.push('Despesas dedutíveis: ' + pct(e.despesas) + ' · receita do ano anterior: ' + BRL(e.recAnterior));
+  L.push('Pessoa física ' + (e.pfContribuinte ? 'É' : 'NÃO é') + ' contribuinte de IBS/CBS'
+        + (e.pfContribuinte ? ' (' + (e.testeAnterior ? 'teste do ano anterior' : 'teste do ano corrente') + ')' : ''));
+  L.push('');
+  L.push('— CUSTO DA ESTRUTURA —');
+  L.push('Honorários: ' + BRL(e.honor) + ' · registros: ' + BRL(e.registros));
+  L.push('ITBI: ' + BRL(e.itbi) + ' (' + pct(e.itbiAl) + (e.preponderante?', sem imunidade':', com imunidade') + ')');
+  L.push('ITCMD antecipado: ' + BRL(e.itcmdAntecipado)
+        + ' (quotas a valor ' + (e.baseQuotas==='mercado'?'de mercado':'contábil')
+        + (e.usufruto?', base 2/3 com usufruto':', base integral') + ')');
+  L.push('ENTRADA TOTAL: ' + BRL(e.entrada) + ' · mensalidade: ' + BRL(e.mensal));
+  L.push('');
+  L.push('— RESULTADO —');
+  L.push('Veredito: ' + veredito);
+  L.push('Payback: ' + (e.paybackAno ? e.paybackAno + ' ano(s)' : 'não recupera em ' + e.horizonte + ' anos'));
+  L.push('Economia acumulada em ' + e.horizonte + ' anos: ' + BRLc(ult.acumulado) + ' (VP ' + BRLc(e.vpl) + ')');
+  L.push('Inventário evitado: ' + BRLc(e.economiaSucessoria)
+        + ' (custo do inventário ' + BRL(e.custoInventario) + ')');
+  L.push('RESULTADO TOTAL: ' + BRLc(total));
+  L.push('');
+  L.push('— CARGA SOBRE O ALUGUEL —');
+  marcos.forEach(l=>{
+    L.push(l.ano + ': PF ' + BRL(l.cargaPF) + ' (' + pct(l.cargaPF/l.rec) + ')'
+         + ' | holding ' + BRL(l.cargaPJ) + ' (' + pct(l.cargaPJ/l.rec) + ')');
+  });
+  L.push('');
+  L.push('— PREMISSAS —');
+  L.push('IBS+CBS de referência: ' + pct(e.aliqRef) + ' · presunção IRPJ/CSLL: ' + pct(e.presuncao));
+  L.push('IPCA acumulado: ' + pct(e.ipca) + ' → limiar ' + BRL(e.limiteAnterior)
+        + ' / ano corrente ' + BRL(e.limiteCorrente));
+  L.push('ITCMD ' + pct(e.itcmdAl) + ' · custas ' + pct(e.custasAl) + ' · honorários de inventário ' + pct(e.honInvAl));
+  L.push('Desconto: ' + pct(e.desconto) + ' a.a.' + (e.transicao ? ' · opção pela transição de 3,65%' : ''));
+  L.push('');
+  L.push('Estimativa para orientar decisão; não substitui análise do caso concreto.');
+  return L.join('\n');
+}
+
+async function copiarResumo(){
+  const txt = montarResumo();
+  const btn = $('btnCopiar'), nota = $('copiaNota');
+  let ok = false;
+  try{ await navigator.clipboard.writeText(txt); ok = true; }
+  catch(err){
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try{ ok = document.execCommand('copy'); }catch(e2){ ok = false; }
+    document.body.removeChild(ta);
+  }
+  contar('resumo_copiado', false);
+  btn.textContent = ok ? 'Copiado' : 'Não foi possível copiar';
+  btn.classList.toggle('ok', ok);
+  nota.textContent = ok
+    ? 'Resumo na área de transferência — cole onde quiser.'
+    : 'Seu navegador bloqueou a cópia. Selecione o texto do resultado manualmente.';
+  setTimeout(()=>{
+    btn.textContent = 'Copiar resumo do caso';
+    btn.classList.remove('ok');
+    nota.textContent = 'Gera um texto com as premissas e o resultado, para você colar onde quiser. Nada é enviado — a cópia vai para a sua área de transferência.';
+  }, 3500);
+}
+
+$('btnCopiar').addEventListener('click', copiarResumo);
+
+/* eventos de comportamento — nunca valores */
+$('form').addEventListener('input', e=>{
+  contar('calculou');
+  if(e.target.id==='baseQuotas') contar('testou_avaliacao_quotas');
+  if(['aliqRef','presuncao','ipca','desconto'].includes(e.target.id)) contar('mexeu_premissas');
+  if(e.target.id==='nTemp') contar('usou_temporada');
+  if(e.target.id==='transicao') contar('testou_transicao');
+});
+document.querySelectorAll('.assum details').forEach(d=>
+  d.addEventListener('toggle',()=>{ if(d.open) contar('abriu_premissas'); }));
+document.querySelector('.guide')?.addEventListener('toggle', function(){
+  if(this.open) contar('abriu_guia');
+});
 
 $('form').addEventListener('input', calcular);
 calcular();

@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<!-- Calculadora de Viabilidade — Holding Patrimonial
+     Executa inteiramente no navegador. Nenhum dado é transmitido ou armazenado. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadora de Viabilidade — Holding Patrimonial</title>
+<meta name="description" content="Compara a tributação do aluguel na pessoa física e na holding, ano a ano, com a entrada gradual do IBS e da CBS até 2033. Calcula o payback e o custo de inventário evitado.">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Calculadora de Viabilidade — Holding Patrimonial">
+<meta property="og:description" content="PF x holding ano a ano até 2033, com ITBI, payback e inventário evitado. Roda no navegador — nenhum número sai do seu aparelho.">
+<meta property="og:image" content="preview.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --ink:#12181F;
+  --paper:#EFF2F1;
+  --surface:#FFFFFF;
+  --petrol:#0E5A63;
+  --petrol-soft:#D7E5E6;
+  --ochre:#B4741A;
+  --ochre-soft:#F2E4CD;
+  --alert:#A32B2B;
+  --alert-soft:#F6E2E2;
+  --rule:#D2D9D8;
+  --muted:#5E6A6C;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --cond:'IBM Plex Sans Condensed',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1220px;margin:0 auto;padding:28px 20px 80px}
+
+/* ---------- header ---------- */
+header{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:26px}
+.eyebrow{
+  font-family:var(--cond);font-weight:700;font-size:12px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--petrol);margin:0 0 6px
+}
+h1{
+  font-family:var(--cond);font-weight:700;font-size:clamp(28px,4.4vw,42px);
+  letter-spacing:-.01em;line-height:1.05;margin:0 0 10px
+}
+.lede{margin:0;max-width:62ch;color:var(--muted);font-size:15px}
+
+/* ---------- layout ---------- */
+.grid{display:grid;grid-template-columns:325px 1fr;gap:26px;align-items:start}
+.grid>*{min-width:0}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+
+/* ---------- panel ---------- */
+.panel{background:var(--surface);border:1px solid var(--rule);padding:18px}
+.panel.sticky{position:sticky;top:20px}
+@media(max-width:900px){.panel.sticky{position:static}}
+
+fieldset{border:0;padding:0;margin:0 0 20px}
+legend{
+  font-family:var(--cond);font-weight:700;font-size:11px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--ink);padding:0 0 8px;
+  border-bottom:1px solid var(--rule);width:100%;margin-bottom:12px
+}
+.field{margin-bottom:11px}
+.field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:3px}
+.field input[type=number],.field select{
+  width:100%;padding:7px 9px;border:1px solid var(--rule);background:var(--surface);
+  font-family:var(--mono);font-size:14px;color:var(--ink);border-radius:0
+}
+.field input:focus,.field select:focus{outline:2px solid var(--petrol);outline-offset:-1px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.check{display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;font-size:13px}
+.check input{margin-top:3px;accent-color:var(--petrol)}
+.hint{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.35}
+
+/* ---------- verdict ---------- */
+.verdict{padding:16px 18px;border-left:5px solid;margin-bottom:20px;background:var(--surface)}
+.verdict.go{border-color:var(--petrol);background:var(--petrol-soft)}
+.verdict.no{border-color:var(--alert);background:var(--alert-soft)}
+.verdict.mid{border-color:var(--ochre);background:var(--ochre-soft)}
+.verdict h2{font-family:var(--cond);font-size:20px;margin:0 0 5px;letter-spacing:-.005em}
+.verdict p{margin:0;font-size:14px;max-width:70ch}
+
+/* ---------- kpis ---------- */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+@media(max-width:700px){.kpis{grid-template-columns:1fr}}
+.kpi{background:var(--surface);border:1px solid var(--rule);padding:14px 16px}
+.kpi .k{font-family:var(--cond);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi .v{font-family:var(--mono);font-weight:600;font-size:25px;letter-spacing:-.02em;line-height:1.1}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:4px}
+.kpi.pos .v{color:var(--petrol)}
+.kpi.neg .v{color:var(--alert)}
+
+/* ---------- régua fiscal (signature) ---------- */
+.ruler{background:var(--surface);border:1px solid var(--rule);padding:18px;margin-bottom:24px}
+.ruler h3,.tblbox h3,.assum h3{
+  font-family:var(--cond);font-weight:700;font-size:13px;letter-spacing:.11em;
+  text-transform:uppercase;margin:0 0 4px
+}
+.ruler .sub{font-size:13px;color:var(--muted);margin:0 0 16px;max-width:72ch}
+.bars{display:flex;gap:5px;align-items:flex-end;min-height:150px;overflow-x:auto;padding-bottom:2px}
+.yr{flex:1 1 0;min-width:44px;display:flex;flex-direction:column;align-items:center;gap:5px}
+.pair{display:flex;gap:3px;align-items:flex-end;height:130px;width:100%;justify-content:center}
+.bar{width:14px;position:relative;display:flex;flex-direction:column;justify-content:flex-end}
+.seg{width:100%}
+.s-irpf{background:var(--ochre)}
+.s-ibsPF{background:var(--ochre-soft);border-top:1px solid var(--ochre)}
+.s-irpj{background:var(--petrol)}
+.s-ibsPJ{background:var(--petrol-soft);border-top:1px solid var(--petrol)}
+.ylab{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.ylab.mark{color:var(--petrol);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;margin-right:5px;vertical-align:-1px}
+
+/* ---------- table ---------- */
+.tblbox{background:var(--surface);border:1px solid var(--rule);padding:18px;margin-bottom:24px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;margin-top:12px}
+th{
+  font-family:var(--cond);font-size:11px;letter-spacing:.07em;text-transform:uppercase;
+  text-align:right;padding:7px 8px;border-bottom:1.5px solid var(--ink);white-space:nowrap
+}
+th:first-child{text-align:left}
+td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
+td:first-child{text-align:left}
+tr.flip td{background:var(--petrol-soft);font-weight:600}
+tr.milestone td{border-bottom:1.5px solid var(--ink)}
+.tag{font-family:var(--cond);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--petrol);margin-left:6px}
+
+/* ---------- assumptions ---------- */
+.assum{background:var(--surface);border:1px solid var(--rule);padding:18px}
+details{border-top:1px solid var(--rule);padding:11px 0}
+details:first-of-type{border-top:0}
+summary{cursor:pointer;font-weight:600;font-size:13.5px;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'+';font-family:var(--mono);color:var(--petrol);margin-right:8px;font-weight:600}
+details[open] summary::before{content:'−'}
+details p{font-size:13px;color:var(--muted);margin:8px 0 0;max-width:76ch}
+details code{font-family:var(--mono);font-size:12px;background:var(--paper);padding:1px 4px}
+
+footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--rule);font-size:12px;color:var(--muted);max-width:80ch}
+.privacy{font-family:var(--cond);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--petrol);margin-bottom:6px}
+@media (prefers-reduced-motion:no-preference){.seg{transition:height .25s ease}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Estruturação patrimonial · memória de cálculo aberta</p>
+  <h1>Vale a pena estruturar uma holding?</h1>
+  <p class="lede">Compara a tributação do aluguel na pessoa física com a da holding, ano a ano, já considerando a entrada gradual do IBS e da CBS até 2033 — e soma o custo sucessório dos dois caminhos.</p>
+</header>
+
+<div class="grid">
+
+<!-- ============ INPUTS ============ -->
+<form class="panel sticky" id="form" autocomplete="off">
+
+  <fieldset>
+    <legend>Patrimônio</legend>
+    <div class="field">
+      <label>Valor de mercado dos imóveis (R$)</label>
+      <input type="number" id="imoveis" value="8000000" step="10000">
+    </div>
+    <div class="field">
+      <label>Custo de aquisição na declaração (R$)</label>
+      <input type="number" id="custoAquisicao" value="3200000" step="10000">
+      <p class="hint">Base contábil das quotas. Se as quotas forem avaliadas a mercado, o ITCMD sobe.</p>
+    </div>
+    <div class="duo">
+      <div class="field">
+        <label>Outros bens (R$)</label>
+        <input type="number" id="outros" value="1500000" step="10000">
+      </div>
+      <div class="field">
+        <label>Valorização (% a.a.)</label>
+        <input type="number" id="valoriz" value="4" step="0.5">
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Locação</legend>
+    <div class="duo">
+      <div class="field">
+        <label>Aluguel mensal total (R$)</label>
+        <input type="number" id="aluguel" value="45000" step="500">
+      </div>
+      <div class="field">
+        <label>Nº de imóveis locados</label>
+        <input type="number" id="nImoveis" value="6" step="1">
+      </div>
+    </div>
+    <div class="duo">
+      <div class="field">
+        <label>Residenciais (nº)</label>
+        <input type="number" id="nResid" value="2" step="1">
+      </div>
+      <div class="field">
+        <label>Por temporada (nº)</label>
+        <input type="number" id="nTemp" value="0" step="1">
+      </div>
+    </div>
+    <p class="hint" id="avisoImoveis"></p>
+    <div class="duo">
+      <div class="field">
+        <label>Despesas dedutíveis (%)</label>
+        <input type="number" id="despesas" value="8" step="1">
+      </div>
+      <div class="field">
+        <label>Receita do ano anterior (R$)</label>
+        <input type="number" id="recAnterior" value="540000" step="10000">
+      </div>
+    </div>
+    <p class="hint" id="statusContribuinte"></p>
+    <label class="check">
+      <input type="checkbox" id="transicao">
+      <span>Contratos com prazo determinado firmados até 2028 e registrados — opção pela alíquota de transição de 3,65%</span>
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Custo da estrutura</legend>
+    <div class="field">
+      <label>Honorários de implantação (R$)</label>
+      <input type="number" id="honorarios" value="60000" step="1000">
+    </div>
+    <div class="duo">
+      <div class="field">
+        <label>Registros e taxas (R$)</label>
+        <input type="number" id="registros" value="12000" step="500">
+      </div>
+      <div class="field">
+        <label>Mensalidade (R$)</label>
+        <input type="number" id="mensal" value="2000" step="100">
+      </div>
+    </div>
+    <div class="field">
+      <label>Alíquota de ITBI (%)</label>
+      <input type="number" id="itbi" value="3" step="0.1">
+    </div>
+    <label class="check">
+      <input type="checkbox" id="preponderante" checked>
+      <span>Atividade preponderantemente imobiliária — sem imunidade de ITBI na integralização</span>
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Sucessão</legend>
+    <div class="duo">
+      <div class="field">
+        <label>ITCMD (%)</label>
+        <input type="number" id="itcmd" value="4" step="0.5">
+      </div>
+      <div class="field">
+        <label>Horizonte (anos)</label>
+        <input type="number" id="horizonte" value="20" step="1">
+      </div>
+    </div>
+    <div class="duo">
+      <div class="field">
+        <label>Custas do inventário (%)</label>
+        <input type="number" id="custas" value="1.5" step="0.1">
+      </div>
+      <div class="field">
+        <label>Honorários do inventário (%)</label>
+        <input type="number" id="honInv" value="6" step="0.5">
+      </div>
+    </div>
+    <div class="field">
+      <label>Avaliação das quotas na doação</label>
+      <select id="baseQuotas">
+        <option value="contabil">Valor contábil (custo de aquisição)</option>
+        <option value="mercado">Valor de mercado</option>
+      </select>
+    </div>
+    <label class="check">
+      <input type="checkbox" id="usufruto" checked>
+      <span>Doação da nua-propriedade com reserva de usufruto — base de 2/3</span>
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Premissas fiscais</legend>
+    <div class="duo">
+      <div class="field">
+        <label>Alíquota IBS+CBS (%)</label>
+        <input type="number" id="aliqRef" value="26.5" step="0.1">
+      </div>
+      <div class="field">
+        <label>Presunção IRPJ/CSLL (%)</label>
+        <input type="number" id="presuncao" value="32" step="1">
+      </div>
+    </div>
+    <div class="field">
+      <label>IPCA acumulado desde a LC 214 (%)</label>
+      <input type="number" id="ipca" value="6.27" step="0.01">
+      <p class="hint">Corrige o limiar de R$ 240.000 e o redutor social de R$ 600, como manda a lei.</p>
+    </div>
+    <div class="field">
+      <label>Taxa de desconto (% a.a.)</label>
+      <input type="number" id="desconto" value="8" step="0.5">
+    </div>
+  </fieldset>
+</form>
+
+<!-- ============ RESULTS ============ -->
+<div>
+  <div class="verdict" id="verdict"><h2></h2><p></p></div>
+
+  <div class="kpis">
+    <div class="kpi" id="kpiPayback"><div class="k">Retorno do investimento</div><div class="v">—</div><div class="s"></div></div>
+    <div class="kpi" id="kpiEcon"><div class="k">Resultado no horizonte</div><div class="v">—</div><div class="s"></div></div>
+    <div class="kpi" id="kpiSuc"><div class="k">Economia na sucessão</div><div class="v">—</div><div class="s"></div></div>
+  </div>
+
+  <div class="ruler">
+    <h3>Régua fiscal</h3>
+    <p class="sub">Carga sobre a receita de aluguel, ano a ano. A barra clara é o IBS/CBS entrando — e na locação ele é acréscimo puro, porque não havia ICMS nem ISS para substituir.</p>
+    <div class="bars" id="bars"></div>
+    <div class="legend">
+      <span><i style="background:var(--ochre)"></i>IRPF sobre aluguel</span>
+      <span><i style="background:var(--ochre-soft);border:1px solid var(--ochre)"></i>IBS/CBS na pessoa física</span>
+      <span><i style="background:var(--petrol)"></i>IRPJ, CSLL e PIS/Cofins</span>
+      <span><i style="background:var(--petrol-soft);border:1px solid var(--petrol)"></i>IBS/CBS na holding</span>
+    </div>
+  </div>
+
+  <div class="tblbox">
+    <h3>Ano a ano</h3>
+    <table>
+      <thead><tr>
+        <th>Ano</th><th>Aluguel</th><th>Carga PF</th><th>Carga PJ</th>
+        <th>Custo estrutura</th><th>Resultado do ano</th><th>Acumulado</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="assum">
+    <h3>Premissas e base legal</h3>
+    <details><summary>Tributação do aluguel na pessoa física</summary>
+      <p>Tabela progressiva mensal do IRPF sobre o aluguel líquido das despesas dedutíveis (IPTU, condomínio e taxa de administração, quando suportados pelo locador). Aplicada a isenção até R$ 5.000 mensais da Lei nº 15.270/2025, com redução decrescente até R$ 7.350 — acima disso, alíquota marginal de 27,5%.</p></details>
+    <details><summary>Quando a pessoa física também paga IBS/CBS</summary>
+      <p>A LC 214/2025 prevê dois testes independentes, e basta um deles. Pelo <em>ano anterior</em>: quatro ou mais imóveis locados <em>e</em> receita acima de R$ 240.000. Pelo <em>ano corrente</em>: receita acima desse mesmo limite majorado em 20%. Atendido qualquer um, o locador pessoa física passa a recolher IBS/CBS — e parte da vantagem da holding desaparece. O painel indica qual dos testes foi acionado.</p></details>
+    <details><summary>Correção dos limites pelo IPCA</summary>
+      <p>O limite de R$ 240.000 e o redutor social de R$ 600 não são valores fixos: a lei manda corrigi-los pelo IPCA desde a publicação da LC 214. Usar os valores nominais subestima o limiar e faz o cálculo tratar como contribuinte quem ainda não é. O percentual acumulado é editável no painel de premissas.</p></details>
+    <details><summary>Locação por temporada</summary>
+      <p>Locação por temporada não tem a mesma redução da locação comum: enquanto esta goza de redução de 70% da alíquota, aquela tem redução de 40% — ou seja, paga 60% da alíquota de referência. A receita é rateada entre residencial, comercial e temporada na proporção do número de imóveis informado, e o redutor social só alcança os residenciais.</p></details>
+    <details><summary>Tributação na holding — Lucro Presumido</summary>
+      <p>Presunção de <code>32%</code> sobre a receita de locação para IRPJ e CSLL. IRPJ de 15% sobre a base presumida, adicional de 10% sobre o que exceder R$ 240.000 anuais de base, CSLL de 9%. PIS e Cofins cumulativos de 3,65% até a extinção em 2027.</p></details>
+    <details><summary>Entrada do IBS e da CBS</summary>
+      <p>Locação de bem imóvel tem redução de 70% da alíquota de referência. A CBS substitui PIS/Cofins em 2027 — o que <em>reduz</em> a carga naquele ano. O IBS entra a 10%, 20%, 30% e 40% da alíquota de referência entre 2029 e 2032, e integralmente em 2033. Como a locação não sofria ICMS nem ISS, o IBS é acréscimo líquido: a carga cai em 2027 e volta a subir a partir de 2029.</p></details>
+    <details><summary>Redutor social e regime de transição</summary>
+      <p>O redutor de R$ 600 mensais por imóvel residencial locado é corrigido pelo IPCA e abatido da base antes da alíquota, sem gerar base negativa. Contratos por prazo determinado firmados até 31/12/2028 e registrados admitem opção por alíquota fixa de 3,65% até o término do contrato. Em 2026, ano-teste, o cálculo mantém PIS/Cofins e não soma as alíquotas de teste, por serem compensáveis.</p></details>
+    <details><summary>ITBI na integralização</summary>
+      <p>A imunidade do art. 156, §2º, I da Constituição não alcança a pessoa jurídica com atividade preponderantemente imobiliária — caso típico da holding de locação. Quando há imunidade, o Tema 796 do STF a limita ao valor efetivamente integralizado ao capital, tributando-se o excedente.</p></details>
+    <details><summary>Comparativo sucessório</summary>
+      <p>No cenário sem estrutura: ITCMD, custas e honorários sobre o patrimônio corrigido até o ano da sucessão. No cenário com holding: ITCMD antecipado sobre a doação das quotas, com base de 2/3 quando reservado o usufruto, sem custas judiciais e sem honorários de inventário. A extinção do usufruto pela morte não gera nova incidência.</p></details>
+    <details><summary>Base de avaliação das quotas</summary>
+      <p>Historicamente as quotas são doadas pelo valor contábil, muito inferior ao valor de mercado dos imóveis. Há movimento normativo e fiscal no sentido de exigir avaliação a mercado — alterne o campo para medir o efeito. É a premissa mais sensível de todo o cálculo.</p></details>
+  </div>
+
+  <footer>
+    <div class="privacy">Nada sai deste dispositivo</div>
+    O cálculo é executado no seu navegador. Nenhum valor é enviado, gravado ou compartilhado.
+    Estimativa para orientar a decisão, sem substituir análise do caso concreto: alíquotas variam por município e por estado,
+    e as regras da reforma seguem em regulamentação. Confirme as premissas antes de decidir.
+  </footer>
+</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+const BRLc = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0,signDisplay:'always'});
+const ANO0 = 2026;
+
+/* IRPF mensal — tabela progressiva + isenção da Lei 15.270/2025 */
+function irpfMensal(base){
+  const faixas = [
+    [2428.80, 0,     0],
+    [2826.65, 0.075, 182.16],
+    [3751.05, 0.15,  394.16],
+    [4664.68, 0.225, 675.49],
+    [Infinity,0.275, 908.73]
+  ];
+  const tabela = b => { for(const [lim,al,ded] of faixas) if(b<=lim) return Math.max(0,b*al-ded); return 0; };
+  if(base <= 5000) return 0;
+  if(base <= 7350){ // redução decrescente entre 5.000 e 7.350
+    const cheio = tabela(7350);
+    return cheio * (base-5000)/(7350-5000);
+  }
+  return tabela(base);
+}
+
+/* fator de entrada do IBS por ano-calendário */
+function fatorIBS(ano){
+  if(ano <= 2028) return 0;
+  if(ano === 2029) return 0.10;
+  if(ano === 2030) return 0.20;
+  if(ano === 2031) return 0.30;
+  if(ano === 2032) return 0.40;
+  return 1;
+}
+const CBS_SHARE = 8.8/26.5;   // parcela federal da alíquota de referência
+const IBS_SHARE = 17.7/26.5;  // parcela subnacional
+const RED_LOCACAO = 0.30;     // locação comum: redução de 70%
+const RED_TEMPORADA = 0.60;   // locação por temporada: redução de 40%
+
+function calcular(){
+  const v = id => parseFloat($(id).value) || 0;
+  const imoveis=v('imoveis'), custoAq=v('custoAquisicao'), outros=v('outros');
+  const valoriz=v('valoriz')/100, aluguel=v('aluguel');
+  const despesas=v('despesas')/100, recAnterior=v('recAnterior'), ipca=v('ipca')/100;
+  const honor=v('honorarios'), registros=v('registros'), mensal=v('mensal');
+  const itbiAl=v('itbi')/100, itcmdAl=v('itcmd')/100, horizonte=Math.max(1,v('horizonte'));
+  const custasAl=v('custas')/100, honInvAl=v('honInv')/100;
+  const aliqRef=v('aliqRef')/100, presuncao=v('presuncao')/100, desconto=v('desconto')/100;
+  const transicao=$('transicao').checked, preponderante=$('preponderante').checked;
+  const usufruto=$('usufruto').checked, baseQuotas=$('baseQuotas').value;
+
+  /* composição da carteira */
+  let nImoveis=Math.max(0,v('nImoveis')), nResid=Math.max(0,v('nResid')), nTemp=Math.max(0,v('nTemp'));
+  const excedeu = (nResid+nTemp) > nImoveis;
+  if(excedeu){ const t=nResid+nTemp; nResid=nImoveis*nResid/t; nTemp=nImoveis*nTemp/t; }
+  $('avisoImoveis').textContent = excedeu
+    ? 'Residenciais e temporada somam mais que o total — os valores foram ajustados em proporção.'
+    : '';
+  const nCom = Math.max(0, nImoveis-nResid-nTemp);
+
+  /* limiares corrigidos pelo IPCA — LC 214/2025 */
+  const limiteAnterior = 240000*(1+ipca);
+  const limiteCorrente = limiteAnterior*1.20;
+  const redutorSocialMes = 600*(1+ipca);
+
+  const receitaAnual = aluguel*12;
+  const patrimonio0 = imoveis + outros;
+
+  /* teste duplo de contribuinte na pessoa física */
+  const testeAnterior = nImoveis >= 4 && recAnterior > limiteAnterior;
+  const testeCorrente = receitaAnual > limiteCorrente;
+  const pfContribuinte = testeAnterior || testeCorrente;
+  const fmt = n => n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+  $('statusContribuinte').innerHTML = pfContribuinte
+    ? 'Pessoa física <b>é contribuinte</b> de IBS/CBS — '
+      + (testeAnterior ? '4+ imóveis e receita anterior acima de '+fmt(limiteAnterior)
+                       : 'receita do ano acima de '+fmt(limiteCorrente))+'.'
+    : 'Pessoa física <b>não é contribuinte</b> de IBS/CBS: exige 4+ imóveis com receita anterior acima de '
+      + fmt(limiteAnterior)+', ou receita no ano acima de '+fmt(limiteCorrente)+'.';
+
+  /* --- custo de entrada --- */
+  const itbi = preponderante ? imoveis*itbiAl : 0;
+  const baseDoacao = (baseQuotas==='mercado' ? imoveis : custoAq) * (usufruto ? 2/3 : 1);
+  const itcmdAntecipado = baseDoacao*itcmdAl;
+  const entrada = honor + registros + itbi + itcmdAntecipado;
+
+  /* --- fluxo anual --- */
+  const linhas=[]; let acumulado=-entrada, paybackAno=null, vpl=-entrada;
+
+  for(let i=0;i<horizonte;i++){
+    const ano = ANO0+i;
+    const corr = Math.pow(1+valoriz,i);
+    const rec = receitaAnual*corr;
+    const baseMes = aluguel*corr*(1-despesas);
+
+    /* IRPF sobre o aluguel */
+    const irpf = irpfMensal(baseMes)*12;
+
+    /* bases de IBS/CBS por tipo de locação */
+    const share = n => nImoveis>0 ? n/nImoveis : 0;
+    const recResid = rec*share(nResid), recTemp = rec*share(nTemp), recCom = rec*share(nCom);
+    const redutorAno = nResid*redutorSocialMes*12*corr;
+    const baseResid = Math.max(0, recResid - redutorAno);
+
+    const fIBS = fatorIBS(ano);
+    const cbsAtivo = ano >= 2027 ? 1 : 0;
+    const fase = aliqRef*(CBS_SHARE*cbsAtivo + IBS_SHARE*fIBS);
+    const ivaBruto = (baseResid + recCom)*fase*RED_LOCACAO + recTemp*fase*RED_TEMPORADA;
+
+    const ivaPF = (pfContribuinte && ano>=2026) ? ivaBruto : 0;
+    const cargaPF = irpf + ivaPF;
+
+    /* holding — lucro presumido */
+    const basePres = rec*presuncao;
+    const irpj = basePres*0.15;
+    const adicional = Math.max(0,(basePres-240000))*0.10;
+    const csll = basePres*0.09;
+    const pisCofins = ano <= 2026 ? rec*0.0365 : 0;
+    const ivaPJ = ano<=2026 ? 0 : (transicao ? rec*0.0365 : ivaBruto);
+    const cargaPJ = irpj + adicional + csll + pisCofins + ivaPJ;
+
+    const custoEstrutura = mensal*12;
+    const resultado = cargaPF - cargaPJ - custoEstrutura;
+    acumulado += resultado;
+    vpl += resultado/Math.pow(1+desconto,i+1);
+    if(paybackAno===null && acumulado>0) paybackAno = i+1;
+
+    linhas.push({ano,rec,cargaPF,cargaPJ,irpf,ivaPF,
+                 cargaPJsemIVA:irpj+adicional+csll+pisCofins, ivaPJefetivo:ivaPJ,
+                 custoEstrutura,resultado,acumulado});
+  }
+
+  /* --- sucessão --- */
+  const patFinal = patrimonio0*Math.pow(1+valoriz,horizonte);
+  const custoInventario = patFinal*(itcmdAl+custasAl+honInvAl);
+  const economiaSucessoria = custoInventario - itcmdAntecipado;
+
+  render({linhas,entrada,itbi,itcmdAntecipado,honor,registros,paybackAno,vpl,
+          custoInventario,economiaSucessoria,horizonte,patFinal,preponderante,transicao});
+}
+
+function render(r){
+  const ult = r.linhas[r.linhas.length-1];
+
+  /* KPIs */
+  const kp=$('kpiPayback');
+  if(r.paybackAno){
+    kp.className='kpi pos';
+    kp.querySelector('.v').textContent = r.paybackAno+(r.paybackAno===1?' ano':' anos');
+    kp.querySelector('.s').textContent = 'para recuperar '+BRL(r.entrada)+' de entrada';
+  }else{
+    kp.className='kpi neg';
+    kp.querySelector('.v').textContent = 'Não recupera';
+    kp.querySelector('.s').textContent = 'entrada de '+BRL(r.entrada)+' não retorna em '+r.horizonte+' anos';
+  }
+
+  const ke=$('kpiEcon');
+  ke.className = 'kpi '+(ult.acumulado>=0?'pos':'neg');
+  ke.querySelector('.v').textContent = BRLc(ult.acumulado);
+  ke.querySelector('.s').textContent = 'valor presente '+BRLc(r.vpl)+' em '+r.horizonte+' anos';
+
+  const ks=$('kpiSuc');
+  ks.className = 'kpi '+(r.economiaSucessoria>=0?'pos':'neg');
+  ks.querySelector('.v').textContent = BRLc(r.economiaSucessoria);
+  ks.querySelector('.s').textContent = 'inventário de '+BRL(r.custoInventario)+' contra ITCMD antecipado de '+BRL(r.itcmdAntecipado);
+
+  /* veredito */
+  const total = ult.acumulado + r.economiaSucessoria;
+  const vd=$('verdict'), h=vd.querySelector('h2'), p=vd.querySelector('p');
+  if(total > r.entrada*0.5 && r.paybackAno){
+    vd.className='verdict go';
+    h.textContent='A estrutura se paga.';
+    p.textContent='Somando a economia corrente sobre o aluguel e o custo sucessório evitado, o resultado é de '
+      +BRLc(total)+' no horizonte de '+r.horizonte+' anos. O retorno da entrada ocorre em '+r.paybackAno
+      +(r.paybackAno===1?' ano':' anos')+'.';
+  }else if(total > 0){
+    vd.className='verdict mid';
+    h.textContent='Compensa, mas por margem estreita.';
+    p.textContent='O resultado positivo de '+BRLc(total)+' vem principalmente do evento sucessório, não da economia corrente. '
+      +'Uma mudança de premissa — avaliação das quotas a mercado, alíquota de ITBI maior ou queda na receita de aluguel — pode inverter a conclusão.';
+  }else{
+    vd.className='verdict no';
+    h.textContent='Neste caso, a holding não compensa.';
+    p.textContent='O custo de entrada de '+BRL(r.entrada)+' e a manutenção não são recuperados: o resultado é de '
+      +BRLc(total)+'. '+(r.preponderante&&r.itbi>0 ? 'O ITBI de '+BRL(r.itbi)+' na integralização responde por boa parte disso. ' : '')
+      +'Vale examinar testamento, doação direta ou outra via antes de estruturar.';
+  }
+
+  /* régua fiscal */
+  const maxCarga = Math.max(...r.linhas.map(l=>Math.max(l.cargaPF,l.cargaPJ)))||1;
+  $('bars').innerHTML = r.linhas.map((l,i)=>{
+    const px = v => Math.max(v>0?2:0, Math.round(v/maxCarga*128));
+    const marco = [2027,2029,2033].includes(l.ano);
+    return `<div class="yr">
+      <div class="pair">
+        <div class="bar" title="Pessoa física: ${BRL(l.cargaPF)}">
+          <div class="seg s-ibsPF" style="height:${px(l.ivaPF)}px"></div>
+          <div class="seg s-irpf" style="height:${px(l.irpf)}px"></div>
+        </div>
+        <div class="bar" title="Holding: ${BRL(l.cargaPJ)}">
+          <div class="seg s-ibsPJ" style="height:${px(l.ivaPJefetivo)}px"></div>
+          <div class="seg s-irpj" style="height:${px(l.cargaPJsemIVA)}px"></div>
+        </div>
+      </div>
+      <div class="ylab ${marco?'mark':''}">${String(l.ano).slice(2)}</div>
+    </div>`;
+  }).join('');
+
+  /* tabela */
+  $('tbody').innerHTML = r.linhas.map((l,i)=>{
+    const flip = l.acumulado>0 && (i===0 || r.linhas[i-1].acumulado<=0);
+    let tag='';
+    if(l.ano===2027) tag='<span class="tag">CBS substitui PIS/Cofins</span>';
+    if(l.ano===2029) tag='<span class="tag">IBS começa</span>';
+    if(l.ano===2033) tag='<span class="tag">IBS pleno</span>';
+    return `<tr class="${flip?'flip':''} ${[2027,2029,2033].includes(l.ano)?'milestone':''}">
+      <td>${l.ano}${tag}</td>
+      <td>${BRL(l.rec)}</td>
+      <td>${BRL(l.cargaPF)}</td>
+      <td>${BRL(l.cargaPJ)}</td>
+      <td>${BRL(l.custoEstrutura)}</td>
+      <td>${BRLc(l.resultado)}</td>
+      <td>${BRLc(l.acumulado)}</td>
+    </tr>`;
+  }).join('');
+}
+
+$('form').addEventListener('input', calcular);
+calcular();
+</script>
+
+</body>
+</html>
